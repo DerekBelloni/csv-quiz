@@ -52,19 +52,25 @@ func createQuiz(records [][]string) []Quiz {
 
 func administerQuiz(quiz []Quiz, qChannel chan<- []int) {
 	quizAnswers := make([]int, len(quiz) - 1)
-	fmt.Printf("Thank you for deciding to take out quiz!\n")
+	fmt.Printf("Thank you for deciding to take our quiz!\n")
 
 	timer := time.NewTimer(duration)
 
-	for i, question := range quiz[1:] {
+	for index, question := range quiz[1:] {
+		answerCh := make(chan int)
+		go func() {
+			var answer int
+			fmt.Println("Question: ", question.Question)
+			fmt.Println("Your answer: ")
+			fmt.Scan(&answer)
+			answerCh <- answer
+		}()
 		select {
 		case <-timer.C:
 			qChannel <- quizAnswers
-
-		default:
-			fmt.Println("Question: ", question.Question)
-			fmt.Println("Your answer: ")
-			fmt.Scan(&quizAnswers[i])
+		case answer := <-answerCh:
+			fmt.Print(answer)
+			quizAnswers[index] = answer
 		}
 	}
 
@@ -89,13 +95,12 @@ func main() {
 	records := readCsvFile()
 	quiz := createQuiz(records)
 
-
 	go administerQuiz(quiz, qChannel)
 
 	quizAnswers := <- qChannel
 	quizScore := checkAnswers(quizAnswers)
-	fmt.Printf("Your score was %v/13", quizScore)
 
+	fmt.Printf("Your score was %v/13", quizScore)
 	close(qChannel)
 }
 
